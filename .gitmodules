@@ -1,0 +1,3 @@
+[submodule "EOS"]
+	path = EOS
+	url = https://github.com/cookgb/Neutron_Star_EOS.git
