@@ -1,4 +1,4 @@
-import OrdinaryDiffEq
+import SciMLBase, OrdinaryDiffEq, NonlinearSolve
 
 export TOVsolution
 export TOVSchwarzschild!, TOVSchwarzschild
@@ -105,7 +105,7 @@ function TOVSchwarzschild(eos::EOS,Ec::Number,MaxR::Number; SurfacePressure::Num
     TOVoutprob = OrdinaryDiffEq.ODEProblem(TOVSchwarzschild!,u0,rspan,[eos]) # [eos] is the list of parameters passed into the integrator
     sol = OrdinaryDiffEq.solve(TOVoutprob,OrdinaryDiffEq.Vern9(), dt=InitialStep*MaxR,      # Solve the system (tried DP5, BS5, Vern9)
 							   abstol=AbsTol,reltol=RelTol,
-    						   callback=OrdinaryDiffEq.ContinuousCallback(findzeroP,OrdinaryDiffEq.terminate!))
+    						   callback=OrdinaryDiffEq.ContinuousCallback(findzeroP,SciMLBase.terminate!))
     return TOVsolution(sol[1,end],Ec,u0[2],sol[2,end],sol.t[end],sol)
 end
 
@@ -286,7 +286,7 @@ function integrateTOVin(EOS::EOS, solution::TOVsolution;
     prob = OrdinaryDiffEq.ODEProblem(TOVin!, u0, r_span, (EOS,R))
     sol = OrdinaryDiffEq.solve(prob, OrdinaryDiffEq.Vern9(),
     						   dt=InitialStep*R, abstol=AbsTol,reltol=RelTol,
-    						   callback=OrdinaryDiffEq.DiscreteCallback(misbehave,OrdinaryDiffEq.terminate!))
+    						   callback=OrdinaryDiffEq.DiscreteCallback(misbehave,SciMLBase.terminate!))
     drtdr0 = sol[1,end]/sol.t[end]*sqrt(1-2*sol[4,end]/sol[1,end])
     return (drtdr0,sol)
 end
@@ -403,7 +403,7 @@ function TOVisotropic(eos::EOS,Ec::Number,Rsurf::Number, drdr::Number; SurfacePr
 
     sol = OrdinaryDiffEq.solve(prob, OrdinaryDiffEq.Vern9(), dt=InitialStep*Rsurf,
 							   abstol=AbsTol, reltol=RelTol,
-							   callback=OrdinaryDiffEq.ContinuousCallback(findzeroP,OrdinaryDiffEq.terminate!))
+							   callback=OrdinaryDiffEq.ContinuousCallback(findzeroP,SciMLBase.terminate!))
     # ------------------------------------------------------------------------------------------------------
     # Keep this code in case the ContinuousCallback fails due to reaching Rsurf before finding the surface
     # pressure.
@@ -529,7 +529,7 @@ function TOVModel(eos::PolytropicEOS,Ec::Number,MaxR::Number; QSurface::Number=1
     sol2 = integrateTOVin(eos,sol1; 
                           AbsTol=AbsTol, RelTol=RelTol, InitialStep=InitialStep);
     newdrdr = OrdinaryDiffEq.solve(
-			  OrdinaryDiffEq.IntervalNonlinearProblem(TOVstart,
+			  NonlinearSolve.IntervalNonlinearProblem(TOVstart,
 													  (0.9*sol2[1],1.1*sol2[1]),
 													  (eos,Ec,R,spress,AbsTol,RelTol,InitialStep)))
     sol3 = TOVisotropic(eos,Ec,R,newdrdr[1];SurfacePressure=spress,
@@ -548,7 +548,7 @@ function TOVModel(eos::RealisticEOS,Ec::Number,MaxR::Number; SurfacePressure::Nu
     sol2 = integrateTOVin(eos,sol1; 
                           AbsTol=AbsTol, RelTol=RelTol, InitialStep=InitialStep);
     newdrdr = OrdinaryDiffEq.solve(
-    		  OrdinaryDiffEq.IntervalNonlinearProblem(TOVstart,
+    		  NonlinearSolve.IntervalNonlinearProblem(TOVstart,
     												  (0.9*sol2[1],1.1*sol2[1]),
     												  (eos,Ec,R,spress,AbsTol,RelTol,InitialStep)))
     sol3 = TOVisotropic(eos,Ec,R,newdrdr[1];SurfacePressure=spress,
